@@ -109,7 +109,24 @@ class LibrespotJavaAPI:
             _LOGGER.debug(
                 _debug_string("Unable to skip to the previous track.", resp.status)
             )
-        return resp.status
+            return resp.status
+    async def async_media_seek(self, position: float) -> None:
+        """Seek to position."""
+        if self._use_pipe_control():
+            pipe_name = self._use_pipe_control()
+            
+            if pipe := self._pipe_control_api.get(pipe_name):
+                position_ms = int(position * 1000)
+                
+                try:
+                    await pipe.player_seek(position=position_ms)  # Use the new method!
+                    _LOGGER.debug("Seek to %sms via %s successful", position_ms, pipe_name)
+                except Exception as e:
+                    _LOGGER.error("Failed to seek via %s: %s", pipe_name, e)
+            else:
+                _LOGGER.warning("No pipe control available for %s", pipe_name)
+        else:
+            await self.api.seek(position_ms=position * 1000)
 
     async def player_set_volume(self, volume: int) -> int:
         """Set volume to a given volume between 0 and 65536."""
@@ -174,3 +191,4 @@ class LibrespotJavaAPI:
             )
         json = await resp.json(content_type=None)
         return json
+
